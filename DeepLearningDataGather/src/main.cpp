@@ -32,7 +32,7 @@ const int chipSelect = 5;
 /*================ Global Variables ================*/
 /*==================================================*/
 
-MMA8452Q accel;
+MMA8452Q accel; // acceleration sensor
 bool gatheringData = false;
 unsigned long previousTime = 0;
 
@@ -182,15 +182,15 @@ void loop()
 
         oled.clearDisplay();
 
-        oled.setTextXY(3,5);              // Set cursor position, start of line 0
+        oled.setTextXY(3,5);              // Set cursor position, start of line 3
         String startString = "Project";  
         oled.putString(startString);
 
-        oled.setTextXY(4,6);              // Set cursor position, start of line 0
+        oled.setTextXY(4,6);              // Set cursor position, start of line 4
         startString = "Deep";  
         oled.putString(startString);
 
-        oled.setTextXY(5,4);              // Set cursor position, start of line 0
+        oled.setTextXY(5,4);              // Set cursor position, start of line 5
         startString = "Learning";  
         oled.putString(startString);
 
@@ -208,37 +208,42 @@ void loop()
         bool dip2 = digitalRead(DIP_PIN_2);
         
         String dataTypeString;
+        int dataXLocation; // locatin to print on screen
         if (!dip1 && !dip2)
         {
           dataType = Walking;
           dataTypeString = "Walking";
+          dataXLocation = 5;
         }
         else if (dip1 && !dip2)
         {
           dataType = Running;
           dataTypeString = "Running";
+          dataXLocation = 5;
         }
         else if (!dip1 && dip2)
         {
           dataType = Cycling;
           dataTypeString = "Cycling";
+          dataXLocation = 5
         }
         else if (dip1 && dip2)
         {
           dataType = ClimbingStairs;
           dataTypeString = "Stairs Climbing";
+          dataXLocation = 1;
         }
 
         oled.clearDisplay();
 
-        oled.setTextXY(3,3);              // Set cursor position, start of line 0
+        oled.setTextXY(3,3);              // Set cursor position, start of line 3
         String startString = "Gathering";  
         oled.putString(startString);
 
-        oled.setTextXY(4,4);              // Set cursor position, start of line 0  
+        oled.setTextXY(4,dataXLocation);  // Set cursor position, start of line 4 
         oled.putString(dataTypeString);
 
-        oled.setTextXY(5,5);              // Set cursor position, start of line 0
+        oled.setTextXY(5,5);              // Set cursor position, start of line 5
         startString = "Data";  
         oled.putString(startString);
 
