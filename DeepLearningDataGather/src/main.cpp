@@ -247,7 +247,7 @@ void loop()
 
         // send first line to file
         char buff[] = "Gathering Data:\n";
-        dataFile.write(buff, sizeof(buff));
+        dataFile.write(buff, sizeof(buff)-1);
 
         // wait half a second to stabalize and get doing activity
         previousTime += 500;
@@ -278,14 +278,8 @@ void WriteSensorValuesToFile(short x, short y, short z, DataType dt)
   int bufferSize = 22;
   char buffer[bufferSize];
 
-  for (int i = 0; i < bufferSize; i++)
-  {
-    buffer[i] = '\0';
-  }
-
-  snprintf(buffer, bufferSize, "%d,%d,%d,%d", x, y, z, (int)dt);
-  buffer[bufferSize - 1] = '\n';
+  int length = snprintf(buffer, bufferSize, "%d,%d,%d,%d\n", x, y, z, (int)dt);
 
   // if the file is available, write to it:
-  dataFile.write(buffer, bufferSize);
+  dataFile.write(buffer, length);
 }
