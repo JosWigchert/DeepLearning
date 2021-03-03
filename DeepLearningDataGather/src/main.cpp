@@ -225,7 +225,7 @@ void loop()
         {
           dataType = Cycling;
           dataTypeString = "Cycling";
-          dataXLocation = 5
+          dataXLocation = 5;
         }
         else if (dip1 && dip2)
         {

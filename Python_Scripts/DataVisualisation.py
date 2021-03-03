@@ -1,8 +1,8 @@
-import matplotlib.pyplot as plt 
-import numpy as np
-from sklearn.preprocessing import MinMaxScaler
+#import matplotlib.pyplot as plt 
+#import numpy as np
+#from sklearn.preprocessing import MinMaxScaler
 
-f = open('C:\\Users\\jwi\\Downloads\\SmallDataset.txt', encoding="utf8")
+f = open('E:\\data.txt', encoding="utf8")
 lines = f.readlines()
 f.close()
 
@@ -50,22 +50,22 @@ print("Run samples:", iRun)
 print("Cycle samples:", iCycle)
 print("Stairs samples:", iStairs)
 
-# plotting data in a graph
-plt.plot(time, x, label = "X acceleration")
-plt.plot(time, y, label = "Y acceleration")
-plt.plot(time, z, label = "Z acceleration")
-#plt.plot(time, type, label = "Type")
-#plt.xlim(0, 20000)
+# # plotting data in a graph
+# plt.plot(time, x, label = "X acceleration")
+# plt.plot(time, y, label = "Y acceleration")
+# plt.plot(time, z, label = "Z acceleration")
+# #plt.plot(time, type, label = "Type")
+# #plt.xlim(0, 20000)
 
-# naming the x axis 
-plt.xlabel('Time (s)') 
-# naming the y axis 
-plt.ylabel('Sensor Values') 
-# giving a title to my graph 
-plt.title('acceleration') 
+# # naming the x axis 
+# plt.xlabel('Time (s)') 
+# # naming the y axis 
+# plt.ylabel('Sensor Values') 
+# # giving a title to my graph 
+# plt.title('acceleration') 
   
-# show a legend on the plot 
-plt.legend() 
+# # show a legend on the plot 
+# plt.legend() 
   
-# function to show the plot 
-plt.show() 
+# # function to show the plot 
+# plt.show() 
