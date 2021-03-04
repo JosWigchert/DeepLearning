@@ -34,12 +34,12 @@ for line in lines:
             iWalk += 1
         elif (t == 1):
             iRun += 1
-            time.append(iRun)
+        elif (t == 2):
+            iCycle += 1
+            time.append(iCycle)
             x.append(int(split[0]))
             y.append(int(split[1]))
             z.append(int(split[2]))
-        elif (t == 2):
-            iCycle += 1
         elif (t == 3):
             iStairs += 1
 
