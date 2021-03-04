@@ -19,11 +19,12 @@ public: // constructors and deconstructors
 
 public: // public methods
     float* predict();
-    void printModelIO();
     void setModelInput(float* input);
+    
 
 private: // private methods
-    
+    void printModelIO();
+    void printModelOutput(unsigned long computingTime, float *output);
 
 // variables
 private:
@@ -96,6 +97,11 @@ TensorModel::TensorModel()
     printModelIO();
 }
 
+void TensorModel::setModelInput(float *input)
+{
+    model_input->data.f = input;
+}
+
 void TensorModel::printModelIO()
 {
     Serial.print("setup() running on core ");
@@ -131,6 +137,60 @@ void TensorModel::printModelIO()
     }
     Serial.print("Output type: ");
     Serial.println(model_output->type);
+}
+
+float* TensorModel::predict()
+{
+    time_t startTime = micros();
+
+    // test input on model
+    TfLiteStatus invoke_status = interpreter->Invoke();
+    if (invoke_status != kTfLiteOk) 
+    {
+        Serial.println("Invoke failed");
+        errorReporter->Report("Invoke failed on input");
+        return nullptr;
+    }
+    else
+    {
+        printModelOutput(micros() - startTime, model_output->data.f);
+        return model_output->data.f;
+    }
+    
+}
+
+void TensorModel::printModelOutput(unsigned long computingTime, float *output)
+{
+    Serial.println();
+    Serial.print("Computing time (us): ");
+    Serial.println(computingTime);
+    
+    int outputSize = 1; // get amount of outputs
+    for (size_t i = 0; i < model_output->dims->size; i++)
+    {
+        outputSize = outputSize * model_output->dims->data[i];
+    }
+    
+    if (outputSize >= 1)
+    {
+        Serial.print("Walking: ");
+        Serial.println(output[0]);
+    }
+    if (outputSize >= 2)
+    {
+        Serial.print("Running: ");
+        Serial.println(output[1]);
+    }
+    if (outputSize >= 3)
+    {
+        Serial.print("Cycling: ");
+        Serial.println(output[2]);
+    }
+    if (outputSize >= 4)
+    {
+        Serial.print("Stairs: ");
+        Serial.println(output[3]);
+    }
 }
 
 TensorModel::~TensorModel()
