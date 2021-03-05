@@ -3,7 +3,7 @@ import os
 
 uppath = lambda _path, n: os.sep.join(_path.split(os.sep)[:-n])
 
-f = open(uppath(__file__, 2) + '\\DeepLearningDataGather\\.pio\\libdeps\\fm-devkit\\SD\\src\\utility\\Sd2PinMap.h', 'r')
+f = open(uppath(__file__, 2) + '\\DeepLearningModel\\.pio\\libdeps\\fm-devkit\\SD\\src\\utility\\Sd2PinMap.h', 'r')
 
 lines = f.readlines()
 
@@ -13,12 +13,12 @@ for i in range(len(lines)-1):
 
 f.close
 
-f = open(uppath(__file__, 2) + '\\DeepLearningDataGather\\.pio\\libdeps\\fm-devkit\\SD\\src\\utility\\Sd2PinMap.h', 'w')
+f = open(uppath(__file__, 2) + '\\DeepLearningModel\\.pio\\libdeps\\fm-devkit\\SD\\src\\utility\\Sd2PinMap.h', 'w')
 f.writelines(lines)
 f.close()
 
 
-f = open(uppath(__file__, 2) + '\\DeepLearningDataGather\\.pio\\libdeps\\fm-devkit\\ACROBOTIC SSD1306\\ACROBOTIC_SSD1306.cpp', 'r')
+f = open(uppath(__file__, 2) + '\\DeepLearningModel\\.pio\\libdeps\\fm-devkit\\ACROBOTIC SSD1306\\ACROBOTIC_SSD1306.cpp', 'r')
 
 lines = f.readlines()
 
@@ -30,6 +30,6 @@ for i in range(len(lines)-1):
 
 f.close
 
-f = open(uppath(__file__, 2) + '\\DeepLearningDataGather\\.pio\\libdeps\\fm-devkit\\ACROBOTIC SSD1306\\ACROBOTIC_SSD1306.cpp', 'w')
+f = open(uppath(__file__, 2) + '\\DeepLearningModel\\.pio\\libdeps\\fm-devkit\\ACROBOTIC SSD1306\\ACROBOTIC_SSD1306.cpp', 'w')
 f.writelines(lines)
 f.close()

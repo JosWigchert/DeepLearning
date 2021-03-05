@@ -143,7 +143,7 @@ void setup() {
     Serial.println("MMA8452 Initialization Successfull");
   }
   
-  accel.setScale(SCALE_4G); // set scale, can choose between: SCALE_2G - SCALE_4G - SCALE_8G
+  accel.setScale(SCALE_8G); // set scale, can choose between: SCALE_2G - SCALE_4G - SCALE_8G
 
   delay(300);
 
