@@ -13,7 +13,7 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 import scipy.stats as stats
 
 
-f = open('WalkingRunningNew.txt', encoding="utf8")
+f = open('SmallDataset.txt', encoding="utf8")
 lines = f.readlines()
 f.close()
 
