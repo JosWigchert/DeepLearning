@@ -59,7 +59,12 @@ TensorModel::TensorModel()
 
 void TensorModel::setModelInput(float *input)
 {
-    //model_input->data.f = input;
+    model_input->data.f = input;
+}
+
+int TensorModel::getOutputSize()
+{
+    return model_output->dims->data[1];
 }
 
 void TensorModel::printModelIO()

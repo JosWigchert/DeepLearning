@@ -49,28 +49,22 @@ namespace {
 
   MMA8452Q accel; // acceleration sensor
 
-  enum DataType { Walking, Running, Cycling, ClimbingStairs, Unknown };
+  enum DataType { Walking = 0, Running, Cycling, ClimbingStairs, Unknown };
   DataType dataType;
 
   unsigned long Time = 0;
   unsigned long Time2 = 0;
   float *input_array = new float[INPUT_ARRAY_SIZE];
-  float *input_array_buffer = new float[INPUT_ARRAY_SIZE];
+  volatile float *input_array_buffer = new float[INPUT_ARRAY_SIZE];
   TensorModel *model;
 
   int currentIndex = 0;
+
+  hw_timer_t * timer = NULL;
+  portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 }
 
-void calculateActivity(void * parameter)
-{
-  while (1)
-  {
-    delay(1);
-    break;
-  }
-  
-  vTaskDelete(NULL);
-}
+void IRAM_ATTR readAccelSensor();
 
 void setup() {
   Serial.begin(115200);
@@ -120,15 +114,19 @@ void setup() {
     Serial.println("MMA8452 Initialization Successfull");
   }
   
-  accel.setScale(SCALE_8G); // set scale, can choose between: SCALE_2G - SCALE_4G - SCALE_8G
+  accel.setScale(SCALE_4G); // set scale, can choose between: SCALE_2G - SCALE_4G - SCALE_8G
 
   delay(300);
 
   model = new TensorModel();
-  model->model_input->data.f = input_array_buffer;
+  model->setModelInput(input_array);
 
-  oled.clearDisplay();
+  timer = timerBegin(0, 80, true);
+  timerAttachInterrupt(timer, &readAccelSensor, true);
+  timerAlarmWrite(timer, 20000, true);
+  timerAlarmEnable(timer);
 
+  delay(3000);
 }
 
 float normalize(float toScale, float mean, float scale)
@@ -164,6 +162,36 @@ int getHighestIndex(float* array, int size)
   return highestIndex;
 }
 
+void IRAM_ATTR readAccelSensor()
+{
+  portENTER_CRITICAL_ISR(&timerMux);
+
+  Serial.println("gathering data");
+  Serial.println(millis());
+  Serial.println();
+
+
+  if (accel.available()) 
+  {      
+    accel.read(); // update accel values of sensor
+    //delayMicroseconds(1); // without it goes in error
+    input_array_buffer[currentIndex] = .1; // normalize(accel.x, MEAN_X, SCALE_X);
+    //delayMicroseconds(1); // without it goes in error 
+    input_array_buffer[currentIndex+1] = .1; // normalize(accel.y, MEAN_Y, SCALE_Y);
+    //delayMicroseconds(1); // without it goes in error
+    input_array_buffer[currentIndex+2] = .1; // normalize(accel.z, MEAN_Z, SCALE_Z);
+    //delayMicroseconds(1); // without it goes in error
+
+    currentIndex = currentIndex + 3;
+    if (currentIndex >= 300)
+    {
+      currentIndex = 0;
+    }
+  }
+
+  portEXIT_CRITICAL_ISR(&timerMux);
+}
+
 void setActivityOnScreen(DataType dataType, float value)
 {
   oled.setTextXY(0,0);
@@ -195,57 +223,52 @@ void setActivityOnScreen(DataType dataType, float value)
   oled.putFloat(value);
 }
 
-void loop() {
+void loop() 
+{
   unsigned long CurrentTime = millis();
-  if (Time2 + (1000 / SENSOR_READ_INTERVAL) < CurrentTime)
+  if (Time2 + 100 < CurrentTime)
   {
     Time2 = CurrentTime;
 
-    if (accel.available()) 
-    {      
-      accel.read(); // update accel values of sensor
-      delayMicroseconds(5); // without it goes in error
-      input_array_buffer[currentIndex] = normalize(accel.x, MEAN_X, SCALE_X);
-      delayMicroseconds(5); // without it goes in error 
-      input_array_buffer[currentIndex+1] = normalize(accel.y, MEAN_Y, SCALE_Y);
-      delayMicroseconds(5); // without it goes in error
-      input_array_buffer[currentIndex+2] = normalize(accel.z, MEAN_Z, SCALE_Z);
-      delayMicroseconds(5); // without it goes in error
+    Serial.println("Calculating model");
 
-      currentIndex = currentIndex + 3;
-    }
+    time_t t = micros();
 
-    if (currentIndex >= 300)
+    timerAlarmDisable(timer);
+    portENTER_CRITICAL(&timerMux);
+    for (size_t i = currentIndex; i < INPUT_ARRAY_SIZE; i++)
     {
-      delay(5);
-
-      for (size_t i = 0; i < INPUT_ARRAY_SIZE; i++)
-      {
-        delayMicroseconds(5); // without it goes in error 
-        input_array[i] =  input_array_buffer[i];
-        delayMicroseconds(5); // without it goes in error
-      }
-      Serial.println("Calculating model");
-      float *output = model->predict();
-      Serial.println("Done calculating");
-      int highestOutputIndex = getHighestIndex(output, 2);
-
-      //if (output[highestOutputIndex] >)
-     // {
-        dataType = (DataType)highestOutputIndex;  
-      //}
-      //else
-     // {
-      //  dataType = Unknown;
-     // }
-      
-
-      setActivityOnScreen(dataType, output[highestOutputIndex]);
-
-      currentIndex = 0;
+      input_array[i-currentIndex] =  input_array_buffer[i];
+      delayMicroseconds(5); // without it goes in error
     }
+
+    for (size_t i = 0; i < currentIndex; i++)
+    {
+      input_array[i+(INPUT_ARRAY_SIZE - currentIndex)] =  input_array_buffer[i];
+      delayMicroseconds(5); // without it goes in error
+    }
+    portEXIT_CRITICAL(&timerMux);
+    timerAlarmEnable(timer);
     
+    float *output = model->predict();
+
+    Serial.println("Done calculating");
+    Serial.print("Calculating took: ");
+    Serial.print(micros()-t);
+    Serial.println(" us");
+
+    int highestOutputIndex = getHighestIndex(output, model->getOutputSize());
+
+    //if (output[highestOutputIndex] >)
+    // {
+      dataType = (DataType)highestOutputIndex;  
+    //}
+    //else
+    // {
+    //  dataType = Unknown;
+    // }
+    
+
+    setActivityOnScreen(dataType, output[highestOutputIndex]);
   }
 }
-
-
