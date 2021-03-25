@@ -173,7 +173,7 @@ void loop()
 
     currentButtonState = digitalRead(BUTTON_PIN);
 
-    if (previousButtonState && !currentButtonState) // button pressed toggle data gathering state
+    if (!previousButtonState && currentButtonState) // button pressed toggle data gathering state
     {
       if (gatheringData)
       {
