@@ -205,9 +205,13 @@ class DeepLearningModel:
 
     def confusion_matrix(self):
         Y_pred = self.model.predict_classes(self.X_test)
-        array = ['Walking', 'Running']
+        u = np.unique(self.Y_test)
+        array = ['Walking', 'Running', 'Cycling', 'Stairs']
+        tags = []
+        for i in u:
+            tags.append(array[i])
         mat = confusion_matrix(self.Y_test, Y_pred)
-        plot_confusion_matrix(conf_mat=mat, class_names= array, show_normed=True, figsize=(3,3))
+        plot_confusion_matrix(conf_mat=mat, class_names= tags, show_normed=True, figsize=(3,3))
         plt.show()
 
     def predict(self, inp):
