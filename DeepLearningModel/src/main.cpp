@@ -149,10 +149,6 @@ float normalize(float toScale, float scale)
   return toScale / scale;
 }
 
-  hw_timer_t * timer = NULL;
-  portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
-}
-
 void IRAM_ATTR readAccelSensor();
 
 void setup() {

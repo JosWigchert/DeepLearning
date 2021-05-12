@@ -1,3 +1,4 @@
+from typing import List
 import pandas as pd
 import scipy.stats as stats
 import numpy as np
@@ -38,17 +39,12 @@ class DeepLearningModel:
         self.frame_size = self.Fs*self.Seconds
         self.hop_size = 10 # The movement of the frame this results in overlapping data
 
-    def create_save_and_ready_dataset(self):
-        self.create_dataset()
+    def create_save_and_ready_dataset(self, files: List):
+        self.create_dataset(files)
         self.save_dataset()
         self.ready_datasets()
 
-    def create_dataset(self):
-        files = glob.glob("Datasets/walking/*.txt")
-        files.extend(glob.glob("Datasets/running/*.txt"))
-        files.extend(glob.glob("Datasets/stairs/*.txt"))
-        files.extend(glob.glob("Datasets/cycling/*.txt"))
-
+    def create_dataset(self, files: List):
         self.datasets = self.preprocess_files(files)
 
         self.X, self.Y = self.create_frames(self.datasets[0], self.frame_size, self.hop_size)

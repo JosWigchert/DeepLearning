@@ -62,11 +62,6 @@ void TensorModel::setModelInput(float *input)
     model_input->data.f = input;
 }
 
-int TensorModel::getOutputSize()
-{
-    return model_output->dims->data[1];
-}
-
 int TensorModel::GetOutputSize()
 {
     int outputSize = 1; // get amount of outputs
