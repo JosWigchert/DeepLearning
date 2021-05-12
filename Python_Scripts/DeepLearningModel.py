@@ -3,6 +3,7 @@ import scipy.stats as stats
 import numpy as np
 import io
 import matplotlib.pyplot as plt 
+import glob
 import os
 
 from sklearn.model_selection import train_test_split
@@ -40,9 +41,14 @@ class DeepLearningModel:
     def create_save_and_ready_dataset(self):
         self.create_dataset()
         self.save_dataset()
+        self.ready_datasets()
 
-    # takes a list of file paths to training data
-    def create_dataset(self, files):
+    def create_dataset(self):
+        files = glob.glob("Datasets/walking/*.txt")
+        files.extend(glob.glob("Datasets/running/*.txt"))
+        files.extend(glob.glob("Datasets/stairs/*.txt"))
+        files.extend(glob.glob("Datasets/cycling/*.txt"))
+
         self.datasets = self.preprocess_files(files)
 
         self.X, self.Y = self.create_frames(self.datasets[0], self.frame_size, self.hop_size)
@@ -74,8 +80,8 @@ class DeepLearningModel:
         # Here we are dividing the data into training data and test data using train_test_split() from sklearn 
         # which we have already imported. We are going to use 80% of the data for training the model and 20% of the data for testing. 
         # random_state controls the shuffling applied to the data before applying the split. stratify = y splits the data in a stratified fashion, using y as the class labels.
-        self.X_train, self.X_val, self.Y_train, self.Y_val = train_test_split(self.X, self.Y, test_size = 0.95, random_state = 0, stratify = self.Y)
-        self.X_val, self.X_test, self.Y_val, self.Y_test = train_test_split(self.X_val, self.Y_val, test_size = 0.8, random_state = 0, stratify = self.Y_val)
+        self.X_train, self.X_val, self.Y_train, self.Y_val = train_test_split(self.X, self.Y, test_size = 0.8, random_state = 0, stratify = self.Y)
+        self.X_val, self.X_test, self.Y_val, self.Y_test = train_test_split(self.X_val, self.Y_val, test_size = 0.5, random_state = 0, stratify = self.Y_val)
 
         print(self.X_train.shape)#Prints train dataset size
         print(self.X_val.shape)#Prints test dataset size
@@ -100,9 +106,9 @@ class DeepLearningModel:
         self.model.add(Dense(8, activation = 'relu'))
         self.model.add(Dropout(0.5))
 
-        self.model.add(Dense(n_activities, activation='softmax'))
+        self.model.add(Dense(4, activation='softmax'))
 
-    def train(self, epochs, plot):
+    def train(self, epochs):
         #Here we are compiling the model and fitting it to the training data. We will use 200 epochs to train the model.
         #An epoch is an iteration over the entire data provided. validation_data is the data on which to evaluate the loss and any model metrics at the end of each epoch.
         #The model will not be trained on this data. As metrics = ['accuracy'] the model will be evaluated based on the accuracy.
@@ -111,27 +117,8 @@ class DeepLearningModel:
 
         lr_schedule = keras.optimizers.schedules.ExponentialDecay(initial_learning_rate=1e-4, decay_steps=10000, decay_rate=0.9)
         self.model.compile(optimizer=Adam(learning_rate = lr_schedule), loss = 'sparse_categorical_crossentropy', metrics = ['accuracy'])
+        #model.compile(loss='binary_crossentropy', optimizer='adam', metrics = ['accuracy'])
         self.history = self.model.fit(self.X_train, self.Y_train, epochs = self.epochs, validation_data=(self.X_val, self.Y_val), verbose=1)
-
-        if plot:
-            # Plot training & validation accuracy values
-            epoch_range = range(1, self.epochs+1)
-            plt.plot(epoch_range, self.history.history['accuracy'])
-            plt.plot(epoch_range, self.history.history['val_accuracy'])
-            plt.title('Model accuracy')
-            plt.ylabel('Accuracy')
-            plt.xlabel('Epoch')
-            plt.legend(['Train', 'Val'], loc='upper left')
-            plt.show()
-
-            # Plot training & validation loss values
-            plt.plot(epoch_range, self.history.history['loss'])
-            plt.plot(epoch_range, self.history.history['val_loss'])
-            plt.title('Model loss')
-            plt.ylabel('Loss')
-            plt.xlabel('Epoch')
-            plt.legend(['Train', 'Val'], loc='upper left')
-            plt.show()
 
     def save_model(self, name: str):
         self.model.save(name)
@@ -150,7 +137,7 @@ class DeepLearningModel:
 
         # Convert the model to the TensorFlow Lite format without quantization
         converter = tf.lite.TFLiteConverter.from_saved_model(name)
-        converter.optimizations = []
+        # converter.optimizations = [tf.lite.Optimize.OPTIMIZE_FOR_SIZE]
         model_no_quant_tflite = converter.convert()
 
         # Save the model to disk
@@ -198,20 +185,38 @@ class DeepLearningModel:
 
         return c_str
 
-    def create_train_and_save_model(self, epochs, name: str, plot=False):
+    def create_train_and_save_model(self, epochs, name: str):
         self.create_model()
-        self.train(epochs, plot)
+        self.train(epochs)
         self.save_model(name)
 
-    def confusion_matrix(self):
+    def show_plots(self):
+        # Plot training & validation accuracy values
+        epoch_range = range(1, self.epochs+1)
+        plt.plot(epoch_range, self.history.history['accuracy'])
+        plt.plot(epoch_range, self.history.history['val_accuracy'])
+        plt.title('Model accuracy')
+        plt.ylabel('Accuracy')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Val'], loc='upper left')
+        plt.show()
+
+        # Plot training & validation loss values
+        plt.plot(epoch_range, self.history.history['loss'])
+        plt.plot(epoch_range, self.history.history['val_loss'])
+        plt.title('Model loss')
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Val'], loc='upper left')
+        plt.show()
+
         Y_pred = self.model.predict_classes(self.X_test)
-        u = np.unique(self.Y_test)
-        array = ['Walking', 'Running', 'Cycling', 'Stairs']
-        tags = []
-        for i in u:
-            tags.append(array[i])
+        names = ['Walking', 'Running', 'Cycling', 'Climbing Stairs']
+        uniqueTest = np.unique(self.Y_test)
+        uniquePred = np.unique(Y_pred)
+        maxTypes = max(len(uniqueTest), len(uniquePred))
         mat = confusion_matrix(self.Y_test, Y_pred)
-        plot_confusion_matrix(conf_mat=mat, class_names= tags, show_normed=True, figsize=(3,3))
+        plot_confusion_matrix(conf_mat=mat, class_names=names[0:maxTypes], show_normed=True, figsize=(maxTypes,maxTypes))
         plt.show()
 
     def predict(self, inp):

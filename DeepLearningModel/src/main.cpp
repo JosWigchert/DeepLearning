@@ -12,14 +12,19 @@
 /*==================================================*/
 
 #include <Wire.h>
-#include "SparkFun_MMA8452Q.h"
+#include <SparkFun_MMA8452Q.h>
 #include <SPI.h>
 #include <ACROBOTIC_SSD1306.h>
-#include "TensorModel.h"
 
+#include "TensorModel.h"
+#include "testArray.h"
+#include "Logger.h"
 /*==================================================*/
 /*===================== Defines ====================*/
 /*==================================================*/
+
+#define ChipSelect 5 
+#define LogFileName "log.txt" 
 
 #define I2C_CLK 21
 #define I2C_DT 22
@@ -29,17 +34,18 @@
 
 #define BUTTON_PIN 4
 
+#define SECOND 1000
+
 #define SENSOR_READ_INTERVAL 50 // Read interval in Hz
 
-#define INPUT_ARRAY_SIZE 400
+#define INPUT_ARRAY_SIZE 300
 
-#define MEAN_X -20.85741800
-#define MEAN_Y -525.50149844
-#define MEAN_Z 43.7810307
+#define DATA_TYPE_BUFFER_TIME .5
+#define DATA_TYPE_BUFFER_SIZE 25
 
-#define SCALE_X 338.02603217
-#define SCALE_Y 489.93786421
-#define SCALE_Z 256.92307326
+#define SCALE_X 1024
+#define SCALE_Y 1024
+#define SCALE_Z 1024
 
 /*==================================================*/
 /*================ Global Variables ================*/
@@ -47,18 +53,101 @@
 
 namespace {
 
+  enum DataType { Walking, Running, Cycling, ClimbingStairs, Unknown };
+  
   MMA8452Q accel; // acceleration sensor
+  Logger* logger;
+  DataType *dataTypeBuffer = new DataType[DATA_TYPE_BUFFER_SIZE];
+  int dataTypeBufferIndex = 0;
 
-  enum DataType { Walking = 0, Running, Cycling, ClimbingStairs, Unknown };
   DataType dataType;
+  DataType dataTypeReference;
 
-  unsigned long Time = 0;
+  // unsigned long Time1 = 0;
   unsigned long Time2 = 0;
   float *input_array = new float[INPUT_ARRAY_SIZE];
   volatile float *input_array_buffer = new float[INPUT_ARRAY_SIZE];
   TensorModel *model;
 
-  int currentIndex = 0;
+  // hw_timer_t * timer = NULL;
+  // portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+
+  size_t currentIndex = 0;
+
+  bool loggingData = false;
+
+  bool currentButtonState = false;
+  bool previousButtonState = false;
+}
+
+float getHighest(float* array, int size)
+{
+  float highest = 0;
+  for (size_t i = 0; i < size; i++)
+  {
+    if(array[i] > highest)
+    {
+      highest = array[i];
+    }
+  }
+  return highest;
+}
+
+int getHighestIndex(float* array, int size)
+{
+  float highest = 0;
+  int highestIndex = 0;
+  for (size_t i = 0; i < size; i++)
+  {
+    if(array[i] > highest)
+    {
+      highest = array[i];
+      highestIndex = i;
+    }
+  }
+  return highestIndex;
+}
+
+void setActivityOnScreen(DataType dataType, float value)
+{
+  //Serial.print("Activity: ");
+  //Serial.print(dataType);
+  //Serial.print("  With value: ");
+  //Serial.println(value);
+
+  oled.setTextXY(0,0);
+  oled.putString("Activity       ");
+  oled.setTextXY(1,0);
+  switch (dataType)
+  {
+  case Walking:
+    oled.putString("Walking        ");
+    break;
+  case Running:
+    oled.putString("Running        ");
+    break;
+  case Cycling:
+    oled.putString("Cycling        ");
+    break;
+  case ClimbingStairs:
+    oled.putString("Climbing Stairs");
+    break;
+  case Unknown:
+    oled.putString("Unknown        ");
+    break;
+  default:
+    break;
+  }
+  oled.setTextXY(2,0);
+  oled.putString("With value     ");
+  oled.setTextXY(3,0);
+  oled.putFloat(value);
+}
+
+float normalize(float toScale, float scale)
+{
+  return toScale / scale;
+}
 
   hw_timer_t * timer = NULL;
   portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
@@ -69,6 +158,11 @@ void IRAM_ATTR readAccelSensor();
 void setup() {
   Serial.begin(115200);
   while (!Serial);// wait for serial port to connect. Needed for native USB port only
+
+  logger = new Logger(ChipSelect, LogFileName);
+
+  Serial.println("Version 1.3 of Deeplearning Project");
+
   Wire.begin(I2C_DT, I2C_CLK, 40000); // Setting i2c bus
 
   /*===================================================*/
@@ -116,159 +210,219 @@ void setup() {
   
   accel.setScale(SCALE_4G); // set scale, can choose between: SCALE_2G - SCALE_4G - SCALE_8G
 
-  delay(300);
+  /*===================================================*/
+  /*========== Setting Pin Modes Of Used Pins =========*/
+  /*===================================================*/
+
+  pinMode(DIP_PIN_1, INPUT_PULLDOWN);
+  pinMode(DIP_PIN_2, INPUT_PULLDOWN);
+
+  pinMode(BUTTON_PIN, INPUT_PULLDOWN);
+
+  /*===================================================*/
+  /*============= Setting TensorFlow Model ============*/
+  /*===================================================*/
 
   model = new TensorModel();
-  model->setModelInput(input_array);
+  
+  oled.clearDisplay();
 
-  timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer, &readAccelSensor, true);
-  timerAlarmWrite(timer, 20000, true);
-  timerAlarmEnable(timer);
-
-  delay(3000);
-}
-
-float normalize(float toScale, float mean, float scale)
-{
-  return (toScale - mean) / scale;
-}
-
-float getHighest(float* array, int size)
-{
-  float highest = 0;
-  for (size_t i = 0; i < size; i++)
+  Serial.println("Calculating model");
+  for (int i = 0; i < INPUT_ARRAY_SIZE; i++)
   {
-    if(array[i] > highest)
-    {
-      highest = array[i];
-    }
+    input_array_buffer[i] = 0;
+    input_array[i] = 0;
   }
-  return highest;
+  model->model_input->data.f = input_array;
 }
 
-int getHighestIndex(float* array, int size)
+void GatherData()
 {
-  float highest = 0;
-  int highestIndex = 0;
-  for (size_t i = 0; i < size; i++)
-  {
-    if(array[i] > highest)
-    {
-      highest = array[i];
-      highestIndex = i;
-    }
-  }
-  return highestIndex;
-}
-
-void IRAM_ATTR readAccelSensor()
-{
-  portENTER_CRITICAL_ISR(&timerMux);
-
-  Serial.println("gathering data");
-  Serial.println(millis());
-  Serial.println();
-
-
   if (accel.available()) 
-  {      
-    accel.read(); // update accel values of sensor
-    //delayMicroseconds(1); // without it goes in error
-    input_array_buffer[currentIndex] = .1; // normalize(accel.x, MEAN_X, SCALE_X);
-    //delayMicroseconds(1); // without it goes in error 
-    input_array_buffer[currentIndex+1] = .1; // normalize(accel.y, MEAN_Y, SCALE_Y);
-    //delayMicroseconds(1); // without it goes in error
-    input_array_buffer[currentIndex+2] = .1; // normalize(accel.z, MEAN_Z, SCALE_Z);
-    //delayMicroseconds(1); // without it goes in error
+    {      
+      accel.read(); // update accel values of sensor
+      input_array_buffer[currentIndex] = normalize(accel.x, 1024);
+      input_array_buffer[currentIndex+1] = normalize(accel.y, 1024);
+      input_array_buffer[currentIndex+2] = normalize(accel.z, 1024);
 
-    currentIndex = currentIndex + 3;
-    if (currentIndex >= 300)
-    {
-      currentIndex = 0;
+      currentIndex = currentIndex + 3;
     }
-  }
-
-  portEXIT_CRITICAL_ISR(&timerMux);
 }
 
-void setActivityOnScreen(DataType dataType, float value)
+void Calculate()
 {
-  oled.setTextXY(0,0);
-  oled.putString("Activity       ");
-  oled.setTextXY(1,0);
-  switch (dataType)
+  for (size_t i = currentIndex; i < INPUT_ARRAY_SIZE; i++)
   {
-  case Walking:
-    oled.putString("Walking        ");
-    break;
-  case Running:
-    oled.putString("Running        ");
-    break;
-  case Cycling:
-    oled.putString("Cycling        ");
-    break;
-  case ClimbingStairs:
-    oled.putString("Climbing Stairs");
-    break;
-  case Unknown:
-    oled.putString("Unknown        ");
-    break;
-  default:
-    break;
+    input_array[i-currentIndex] =  input_array_buffer[i];
   }
-  oled.setTextXY(2,0);
-  oled.putString("With value     ");
-  oled.setTextXY(3,0);
-  oled.putFloat(value);
+
+  for (size_t i = 0; i < currentIndex; i++)
+  {
+    input_array[i+(INPUT_ARRAY_SIZE - currentIndex)] =  input_array_buffer[i];
+  }
+
+  //Serial.println("Calculating model");
+  float *output = model->predict();
+  //Serial.println("Done calculating");
+  int highestOutputIndex = getHighestIndex(output, model->GetOutputSize());
+
+  //if (output[highestOutputIndex] > 0)
+  {
+    dataType = (DataType)highestOutputIndex;  
+  }
+  // else
+  // {
+  //   dataType = Unknown;
+  // }
+  dataTypeBuffer[dataTypeBufferIndex] = dataType;
+  dataTypeBufferIndex++;
+
+  //setActivityOnScreen(dataType, output[highestOutputIndex]);
+
+  if (currentIndex >= INPUT_ARRAY_SIZE)
+  {
+    currentIndex = 0;
+  }
+}
+
+void LogActivity(DataType datatype, DataType datatypeReference)
+{
+  // int walking = 0;
+  // int running = 0;
+  // int cycling = 0;
+  // int stairs = 0;
+
+  // for (size_t i = 0; i < DATA_TYPE_BUFFER_SIZE; i++)
+  // {
+  //   switch (dataTypeBuffer[i])
+  //   {
+  //   case Walking:
+  //     walking++;
+  //     break;
+  //   case Running:
+  //     running++;
+  //     break;
+  //   case Cycling:
+  //     cycling++;
+  //     break;
+  //   case ClimbingStairs:
+  //     stairs++;
+  //     break;
+  //   default:
+  //     break;
+  //   }
+  // }
+
+  // int maxValue = max(max(walking, running), max(cycling, stairs));
+  // Serial.print("walking: ");
+  // Serial.println(walking);
+  // Serial.print("running: ");
+  // Serial.println(running);
+  // Serial.print("cycling: ");
+  // Serial.println(cycling);
+  // Serial.print("stairs: ");
+  // Serial.println(stairs);
+
+  // Serial.print("Max value: ");
+  // Serial.println(maxValue);
+  //float percentage = (float)maxValue / (float)(walking + running + cycling + stairs);
+
+  logger->Log(datatype, datatypeReference);
+  // if (maxValue == walking)
+  // {
+  //   logger->Log(Walking, percentage);
+  // }
+  // else if (maxValue == running)
+  // {
+  //   logger->Log(Running, percentage);
+  // }
+  // else if (maxValue == cycling)
+  // {
+  //   logger->Log(Cycling, percentage);
+  // }
+  // else if (maxValue == stairs)
+  // {
+  //   logger->Log(ClimbingStairs, percentage);
+  // }
 }
 
 void loop() 
 {
   unsigned long CurrentTime = millis();
-  if (Time2 + 100 < CurrentTime)
+
+  if (dataTypeBufferIndex == DATA_TYPE_BUFFER_SIZE)
   {
+    dataTypeBufferIndex = 0;
+  }
+
+  if (Time2 + (1000 / SENSOR_READ_INTERVAL) < CurrentTime)
+  {
+    Serial.print("Starting cycle: ");
+    Serial.println(millis());
     Time2 = CurrentTime;
 
-    Serial.println("Calculating model");
+    GatherData();
+    Serial.print("Done gathering data: ");
+    Serial.println(millis());
 
-    time_t t = micros();
+    Calculate();
+    Serial.print("Done Calculating: ");
+    Serial.println(millis());
 
-    timerAlarmDisable(timer);
-    portENTER_CRITICAL(&timerMux);
-    for (size_t i = currentIndex; i < INPUT_ARRAY_SIZE; i++)
+    if (loggingData)
     {
-      input_array[i-currentIndex] =  input_array_buffer[i];
-      delayMicroseconds(5); // without it goes in error
-    }
+      LogActivity(dataType, dataTypeReference);
+      Serial.print("Done Logging: ");
+      Serial.println(millis());
+    } 
 
-    for (size_t i = 0; i < currentIndex; i++)
+    currentButtonState = digitalRead(BUTTON_PIN);
+
+    if (previousButtonState && !currentButtonState) // button pressed toggle data gathering state
     {
-      input_array[i+(INPUT_ARRAY_SIZE - currentIndex)] =  input_array_buffer[i];
-      delayMicroseconds(5); // without it goes in error
+      if (loggingData)
+      {
+        Serial.println("Stopped logging data");
+        loggingData = false;
+
+        // Close the file
+        logger->Stop();
+      }
+      else
+      {
+        Serial.println("Started logging data");
+
+        // select data type according to dip switch positions
+        bool dip1 = digitalRead(DIP_PIN_1);
+        bool dip2 = digitalRead(DIP_PIN_2);
+        Serial.println(dip1);
+        Serial.println(dip2);
+        if (!dip1 && !dip2)
+        {
+          dataTypeReference = Walking;
+        }
+        else if (dip1 && !dip2)
+        {
+          dataTypeReference = Running;
+        }
+        else if (!dip1 && dip2)
+        {
+          dataTypeReference = Cycling;
+        }
+        else if (dip1 && dip2)
+        {
+          dataTypeReference = ClimbingStairs;
+        }
+        
+        loggingData = true;
+
+        logger->Start();
+        logger->Log(String("Log session started\n"));
+      }
     }
-    portEXIT_CRITICAL(&timerMux);
-    timerAlarmEnable(timer);
-    
-    float *output = model->predict();
-
-    Serial.println("Done calculating");
-    Serial.print("Calculating took: ");
-    Serial.print(micros()-t);
-    Serial.println(" us");
-
-    int highestOutputIndex = getHighestIndex(output, model->getOutputSize());
-
-    //if (output[highestOutputIndex] >)
-    // {
-      dataType = (DataType)highestOutputIndex;  
-    //}
-    //else
-    // {
-    //  dataType = Unknown;
-    // }
-    
-
-    setActivityOnScreen(dataType, output[highestOutputIndex]);
+    previousButtonState = currentButtonState;
+    Serial.print("Done Cycle: ");
+    Serial.println(millis());
+    Serial.println();
   }
 }
