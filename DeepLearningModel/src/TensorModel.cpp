@@ -1,12 +1,12 @@
 #include <TensorModel.h>
-#include "deeplearningModel.h"
+#include "Walking_Running_Cycling_Model.h"
 
 TensorModel::TensorModel()
 {
     static tflite::MicroErrorReporter micro_error_reporter;
     errorReporter = &micro_error_reporter;
 
-    model = tflite::GetModel(deeplearningModel);
+    model = tflite::GetModel(Walking_Running_Cycling_Model);
     if (model->version() != TFLITE_SCHEMA_VERSION)
     {
         errorReporter->Report("Model version does nog match Schema");
@@ -17,13 +17,13 @@ TensorModel::TensorModel()
     micro_mutable_op_resolver.AddBuiltin(
         tflite::BuiltinOperator_FULLY_CONNECTED,
         tflite::ops::micro::Register_FULLY_CONNECTED(),
-        9, 9
+        1, 9
     );
 
     micro_mutable_op_resolver.AddBuiltin(
         tflite::BuiltinOperator_CONV_2D,
         tflite::ops::micro::Register_CONV_2D(),
-        5, 5
+        1, 5
     );
 
     micro_mutable_op_resolver.AddBuiltin(
@@ -59,7 +59,17 @@ TensorModel::TensorModel()
 
 void TensorModel::setModelInput(float *input)
 {
-    //model_input->data.f = input;
+    model_input->data.f = input;
+}
+
+int TensorModel::GetOutputSize()
+{
+    int outputSize = 1; // get amount of outputs
+    for (size_t i = 0; i < model_output->dims->size; i++)
+    {
+        outputSize = outputSize * model_output->dims->data[i];
+    }
+    return outputSize;
 }
 
 void TensorModel::printModelIO()

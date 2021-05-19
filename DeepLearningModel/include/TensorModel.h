@@ -18,6 +18,7 @@ public: // constructors and deconstructors
 public: // public methods
     float* predict();
     void setModelInput(float* input);
+    int GetOutputSize();
     
 
 private: // private methods
