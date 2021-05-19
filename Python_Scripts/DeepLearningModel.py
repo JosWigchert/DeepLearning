@@ -75,8 +75,8 @@ class DeepLearningModel:
 
     def ready_datasets(self):
         # split the dataset into train, validation and test data
-        self.X_train, self.X_val, self.Y_train, self.Y_val = train_test_split(self.X, self.Y, test_size = 0.95, random_state = 0, stratify = self.Y)
-        self.X_val, self.X_test, self.Y_val, self.Y_test = train_test_split(self.X_val, self.Y_val, test_size = 0.5, random_state = 0, stratify = self.Y_val)
+        self.X_train, self.X_val, self.Y_train, self.Y_val = train_test_split(self.X, self.Y, test_size = 0.8, random_state = 0, stratify = self.Y)
+        self.X_val, self.X_test, self.Y_val, self.Y_test = train_test_split(self.X_val, self.Y_val, test_size = 0.6, random_state = 0, stratify = self.Y_val)
 
         print(self.X_train.shape)#Prints train dataset size
         print(self.X_val.shape)#Prints test dataset size
