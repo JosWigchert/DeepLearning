@@ -1,12 +1,12 @@
 #include <TensorModel.h>
-#include "Walking_Running_Cycling_Model.h"
+#include "Walking_Running_Stairs_Cycling_Model_Copied_Stairs_Data.h"
 
 TensorModel::TensorModel()
 {
     static tflite::MicroErrorReporter micro_error_reporter;
     errorReporter = &micro_error_reporter;
 
-    model = tflite::GetModel(Walking_Running_Cycling_Model);
+    model = tflite::GetModel(Walking_Running_Stairs_Cycling_Model);
     if (model->version() != TFLITE_SCHEMA_VERSION)
     {
         errorReporter->Report("Model version does nog match Schema");

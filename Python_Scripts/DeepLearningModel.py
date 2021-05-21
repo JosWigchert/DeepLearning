@@ -76,8 +76,8 @@ class DeepLearningModel:
         # Here we are dividing the data into training data and test data using train_test_split() from sklearn 
         # which we have already imported. We are going to use 80% of the data for training the model and 20% of the data for testing. 
         # random_state controls the shuffling applied to the data before applying the split. stratify = y splits the data in a stratified fashion, using y as the class labels.
-        self.X_train, self.X_val, self.Y_train, self.Y_val = train_test_split(self.X, self.Y, test_size = 0.8, random_state = 0, stratify = self.Y)
-        self.X_val, self.X_test, self.Y_val, self.Y_test = train_test_split(self.X_val, self.Y_val, test_size = 0.5, random_state = 0, stratify = self.Y_val)
+        self.X_train, self.X_val, self.Y_train, self.Y_val = train_test_split(self.X, self.Y, test_size = 0.95, random_state = 0, stratify = self.Y)
+        self.X_val, self.X_test, self.Y_val, self.Y_test = train_test_split(self.X_val, self.Y_val, test_size = 0.8, random_state = 0, stratify = self.Y_val)
 
         print(self.X_train.shape)#Prints train dataset size
         print(self.X_val.shape)#Prints test dataset size
