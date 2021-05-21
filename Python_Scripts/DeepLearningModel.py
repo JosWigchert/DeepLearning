@@ -44,6 +44,7 @@ class DeepLearningModel:
         self.save_dataset()
         self.ready_datasets()
 
+    # processes a list of files into a list of frames which are used for input
     def create_dataset(self, files: List):
         self.datasets = self.preprocess_files(files)
 
@@ -73,11 +74,17 @@ class DeepLearningModel:
         self.ready_datasets()
 
     def ready_datasets(self):
+<<<<<<< HEAD
         # Here we are dividing the data into training data and test data using train_test_split() from sklearn 
         # which we have already imported. We are going to use 80% of the data for training the model and 20% of the data for testing. 
         # random_state controls the shuffling applied to the data before applying the split. stratify = y splits the data in a stratified fashion, using y as the class labels.
         self.X_train, self.X_val, self.Y_train, self.Y_val = train_test_split(self.X, self.Y, test_size = 0.95, random_state = 0, stratify = self.Y)
         self.X_val, self.X_test, self.Y_val, self.Y_test = train_test_split(self.X_val, self.Y_val, test_size = 0.8, random_state = 0, stratify = self.Y_val)
+=======
+        # split the dataset into train, validation and test data
+        self.X_train, self.X_val, self.Y_train, self.Y_val = train_test_split(self.X, self.Y, test_size = 0.8, random_state = 0, stratify = self.Y)
+        self.X_val, self.X_test, self.Y_val, self.Y_test = train_test_split(self.X_val, self.Y_val, test_size = 0.6, random_state = 0, stratify = self.Y_val)
+>>>>>>> ba1e5d05b9d29a324b7a5c726c88698f830e581c
 
         print(self.X_train.shape)#Prints train dataset size
         print(self.X_val.shape)#Prints test dataset size
@@ -87,10 +94,11 @@ class DeepLearningModel:
         self.X_val = self.X_val.reshape(self.X_val.shape + (1, ))
         self.X_test = self.X_test.reshape(self.X_test.shape + (1, ))
 
+    # defines the layers used in the model.
     def create_model(self):
         n_activities = len(np.unique(self.Y))
 
-        ## Create the model
+        # Create the model
         self.model = Sequential()
         self.model.add(Conv2D(4, (3, 1), activation = 'relu', input_shape = (100, 3, 1))) 
         self.model.add(Dropout(0.1))
@@ -102,6 +110,7 @@ class DeepLearningModel:
         self.model.add(Dense(8, activation = 'relu'))
         self.model.add(Dropout(0.5))
 
+        # Output layer
         self.model.add(Dense(4, activation='softmax'))
 
     def train(self, epochs):
@@ -113,7 +122,6 @@ class DeepLearningModel:
 
         lr_schedule = keras.optimizers.schedules.ExponentialDecay(initial_learning_rate=1e-4, decay_steps=10000, decay_rate=0.9)
         self.model.compile(optimizer=Adam(learning_rate = lr_schedule), loss = 'sparse_categorical_crossentropy', metrics = ['accuracy'])
-        #model.compile(loss='binary_crossentropy', optimizer='adam', metrics = ['accuracy'])
         self.history = self.model.fit(self.X_train, self.Y_train, epochs = self.epochs, validation_data=(self.X_val, self.Y_val), verbose=1)
 
     def save_model(self, name: str):
@@ -122,6 +130,7 @@ class DeepLearningModel:
     def load_model(self, name: str):
         self.model = tf.keras.models.load_model(name)
 
+    # compiles the model into a tflite model which can be used on a microcontroller
     def compile_tflite_model(self, name: str):
         MODELS_DIR = name+ '/'
         if not os.path.exists(MODELS_DIR):
@@ -148,6 +157,7 @@ class DeepLearningModel:
         with open(c_model_name + '.h', 'w') as file:
             file.write(self.hex_to_c_array(model_no_quant_tflite, c_model_name))
 
+    # converts a byte array to a C header file so that it can be used by a microcontroller without filesystem
     def hex_to_c_array(self, hex_data, var_name):
         c_str = ''
 
@@ -206,6 +216,7 @@ class DeepLearningModel:
         plt.legend(['Train', 'Val'], loc='upper left')
         plt.show()
 
+        # Plot the confusion matrix
         Y_pred = self.model.predict_classes(self.X_test)
         names = ['Walking', 'Running', 'Cycling', 'Climbing Stairs']
         uniqueTest = np.unique(self.Y_test)
@@ -248,7 +259,7 @@ class DeepLearningModel:
                     z.append((int(split[2]) - self.mean[2])/self.scale[2])
                     t.append(int(split[3]))
                 else:
-                    # split data
+                    # start a new dataframe if an invalid line is read, this could indicate the start of a new measurement
                     df = pd.DataFrame()
                     df["type"] = t
                     df["x"] = x
@@ -270,6 +281,9 @@ class DeepLearningModel:
 
         return datasets
 
+    # creates a list of frames from a dataframe
+    # frames_size is the amount of samples in a frame
+    # hop_size specifies how many samples each frame is shifted from the previous frame
     def create_frames(self, df, frame_size, hop_size):
         N_FEATURES = 3 # Amount of inputs 3 because x, y, z,
         
@@ -283,6 +297,7 @@ class DeepLearningModel:
             # Retrieve the most often used label in this segment
             label = stats.mode(df['type'][i: i + frame_size])[0][0]
 
+            # Only save frames of the correct size
             if len(x)==frame_size:
                 frames.append([x, y, z])
                 labels.append(label)

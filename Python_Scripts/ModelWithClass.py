@@ -1,5 +1,4 @@
 import DeepLearningModel
-import numpy as np
 import glob
 FREQUENCY = 200
 TARGET_FREQUENCY = 50
