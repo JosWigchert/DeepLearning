@@ -52,7 +52,7 @@ namespace {
   enum DataType { Walking = 0, Running, Cycling, ClimbingStairs, Unknown };
   DataType dataType;
 
-  unsigned long Time = 0;
+  unsigned long Time1 = 0;
   unsigned long Time2 = 0;
   float *input_array = new float[INPUT_ARRAY_SIZE];
   volatile float *input_array_buffer = new float[INPUT_ARRAY_SIZE];
@@ -114,17 +114,17 @@ void setup() {
     Serial.println("MMA8452 Initialization Successfull");
   }
   
-  accel.setScale(SCALE_4G); // set scale, can choose between: SCALE_2G - SCALE_4G - SCALE_8G
+  accel.setScale(SCALE_8G); // set scale, can choose between: SCALE_2G - SCALE_4G - SCALE_8G
 
   delay(300);
 
   model = new TensorModel();
   model->setModelInput(input_array);
 
-  timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer, &readAccelSensor, true);
-  timerAlarmWrite(timer, 20000, true);
-  timerAlarmEnable(timer);
+  //timer = timerBegin(0, 80, true);
+  //timerAttachInterrupt(timer, &readAccelSensor, true);
+  //timerAlarmWrite(timer, 20000, true);
+  //timerAlarmEnable(timer);
 
   delay(3000);
 }
@@ -194,6 +194,11 @@ void IRAM_ATTR readAccelSensor()
 
 void setActivityOnScreen(DataType dataType, float value)
 {
+  Serial.print("Activity: ");
+  Serial.print(dataType);
+  Serial.print("  With value: ");
+  Serial.println(value);
+
   oled.setTextXY(0,0);
   oled.putString("Activity       ");
   oled.setTextXY(1,0);
@@ -226,6 +231,29 @@ void setActivityOnScreen(DataType dataType, float value)
 void loop() 
 {
   unsigned long CurrentTime = millis();
+
+  Serial.println("gathering data");
+  Serial.println(millis());
+  Serial.println();
+
+
+  if (accel.available() && Time1) 
+  {      
+    accel.read(); // update accel values of sensor
+    //delayMicroseconds(1); // without it goes in error
+    input_array_buffer[currentIndex] = .1; // normalize(accel.x, MEAN_X, SCALE_X);
+    //delayMicroseconds(1); // without it goes in error 
+    input_array_buffer[currentIndex+1] = .1; // normalize(accel.y, MEAN_Y, SCALE_Y);
+    //delayMicroseconds(1); // without it goes in error
+    input_array_buffer[currentIndex+2] = .1; // normalize(accel.z, MEAN_Z, SCALE_Z);
+    //delayMicroseconds(1); // without it goes in error
+
+    currentIndex = currentIndex + 3;
+    if (currentIndex >= 300)
+    {
+      currentIndex = 0;
+    }
+  }
   if (Time2 + 100 < CurrentTime)
   {
     Time2 = CurrentTime;
@@ -234,8 +262,8 @@ void loop()
 
     time_t t = micros();
 
-    timerAlarmDisable(timer);
-    portENTER_CRITICAL(&timerMux);
+    //timerAlarmDisable(timer);
+    //portENTER_CRITICAL(&timerMux);
     for (size_t i = currentIndex; i < INPUT_ARRAY_SIZE; i++)
     {
       input_array[i-currentIndex] =  input_array_buffer[i];
@@ -247,8 +275,8 @@ void loop()
       input_array[i+(INPUT_ARRAY_SIZE - currentIndex)] =  input_array_buffer[i];
       delayMicroseconds(5); // without it goes in error
     }
-    portEXIT_CRITICAL(&timerMux);
-    timerAlarmEnable(timer);
+    //portEXIT_CRITICAL(&timerMux);
+    //timerAlarmEnable(timer);
     
     float *output = model->predict();
 

@@ -253,14 +253,10 @@ void loop()
         // send first line to file
         char buff[] = "Gathering Data:\n";
         dataFile.write(buff, sizeof(buff)-1);
-
-        // wait half a second to stabalize and get doing activity
-        previousTime += 500;
       }
     }
     previousButtonState = currentButtonState;
     
-
     if (gatheringData)
     {
       if (accel.available()) 
@@ -272,7 +268,6 @@ void loop()
       {
         WriteSensorValuesToFile(accel.x, accel.y, accel.z, dataType); // write previous values to sd to avoid missing datapoints
       }
-      
     }  
   }
 }

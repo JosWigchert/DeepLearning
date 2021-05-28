@@ -1,12 +1,12 @@
 #include <TensorModel.h>
-#include "deeplearningModel.h"
+#include "Walking_Running_Model.h"
 
 TensorModel::TensorModel()
 {
     static tflite::MicroErrorReporter micro_error_reporter;
     errorReporter = &micro_error_reporter;
 
-    model = tflite::GetModel(deeplearningModel);
+    model = tflite::GetModel(Walking_Running_Model);
     if (model->version() != TFLITE_SCHEMA_VERSION)
     {
         errorReporter->Report("Model version does nog match Schema");
