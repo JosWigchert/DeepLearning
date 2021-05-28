@@ -5,7 +5,9 @@
 /*==================================================*/
 
 #include <Wire.h>
+
 #include "SparkFun_MMA8452Q.h"
+
 #include <SPI.h>
 #include <SD.h>
 #include <ACROBOTIC_SSD1306.h>
@@ -146,9 +148,7 @@ void setup() {
   accel.setScale(SCALE_8G); // set scale, can choose between: SCALE_2G - SCALE_4G - SCALE_8G
 
   delay(300);
-
   
-
   /*===================================================*/
   /*========== Setting Pin Modes Of Used Pins =========*/
   /*===================================================*/

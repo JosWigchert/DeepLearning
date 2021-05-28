@@ -1,6 +1,19 @@
-import pandas as pd
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Flatten, Dense, Dropout, BatchNormalization
+from tensorflow.keras.layers import Conv2D, MaxPool2D
+from tensorflow.keras.optimizers import Adam
+print(tf.version)
 
-f = open('WalkingRunningNew.txt', encoding="utf8")
+import pandas as pd
+import matplotlib.pyplot as plt 
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+import scipy.stats as stats
+
+
+f = open('SmallDataset.txt', encoding="utf8")
 lines = f.readlines()
 f.close()
 
@@ -60,38 +73,53 @@ activities = df['Activity'].value_counts().index
 #Stairs = 3
 
 #Smallest dataset is 9540 samples(for walking) thus we will only use the same amount of samples for each activity 
-lowestSampleCount = min(df['Activity'].value_counts())
-print(lowestSampleCount)
+lowestSampleCount = 30365
+
 Walking = df[df['Activity'] == 0].head(lowestSampleCount).copy()
-Running = df[df['Activity'] == 1].head(lowestSampleCount).copy()
-Cycling = df[df['Activity'] == 2].head(lowestSampleCount).copy()
-Stairs = df[df['Activity'] == 3].head(lowestSampleCount).copy()
+Running = df[df['Activity'] == 1].copy()
 
 
-NewWalking = Walking.iloc[::4, :]
-NewRunning = Running.iloc[::4, :]
-NewCycling = Cycling.iloc[::4, :]
-NewStairs  =  Stairs.iloc[::4, :]
+#print(Walking)
 
-NewWalking = NewWalking.append(Walking.iloc[1::4, :])
-NewRunning = NewRunning.append(Running.iloc[1::4, :])
-NewCycling = NewCycling.append(Cycling.iloc[1::4, :])
-NewStairs  =  NewStairs.append( Stairs.iloc[1::4, :])
 
-NewWalking = NewWalking.append(Walking.iloc[2::4, :])
-NewRunning = NewRunning.append(Running.iloc[2::4, :])
-NewCycling = NewCycling.append(Cycling.iloc[2::4, :])
-NewStairs  =  NewStairs.append( Stairs.iloc[2::4, :])
+# Copy from this part to lower fs from 200 to 50
+NewWalking = pd.DataFrame(columns=['Activity', 'X data', 'Y data', 'Z data'])
+c = 0
+for x in range(0,lowestSampleCount,4):
+  NewWalking.loc[c] = Walking.iloc[x]
+  c = c + 1  
+for x in range(1,lowestSampleCount,4):
+  NewWalking.loc[c] = Walking.iloc[x]
+  c = c + 1  
+for x in range(2,lowestSampleCount,4):
+  NewWalking.loc[c] = Walking.iloc[x]
+  c = c + 1  
+for x in range(3,lowestSampleCount,4):
+  NewWalking.loc[c] = Walking.iloc[x]
+  c = c + 1  
 
-NewWalking = NewWalking.append(Walking.iloc[3::4, :])
-NewRunning = NewRunning.append(Running.iloc[3::4, :])
-NewCycling = NewCycling.append(Cycling.iloc[3::4, :])
-NewStairs  =  NewStairs.append( Stairs.iloc[3::4, :])
+c = 0
+NewRunning = pd.DataFrame(columns=['Activity', 'X data', 'Y data', 'Z data'])
+for x in range(0,lowestSampleCount,4):
+  NewRunning.loc[c] = Running.iloc[x]
+  c = c + 1  
+for x in range(1,lowestSampleCount,4):
+  NewRunning .loc[c] = Running.iloc[x]
+  c = c + 1  
+for x in range(2,lowestSampleCount,4):
+  NewRunning.loc[c] = Running.iloc[x]
+  c = c + 1  
+for x in range(3,lowestSampleCount,4):
+  NewRunning .loc[c] = Running.iloc[x]
+  c = c + 1  
+
+#print(NewWalking)
+
 
 balanced_data = pd.DataFrame()
-balanced_data = balanced_data.append([NewWalking, NewRunning, NewCycling, NewStairs])
+balanced_data = balanced_data.append([NewWalking, NewRunning])
 
-balanced_data.to_csv(r'balanced_data_50hzV2.csv',index = False)
+balanced_data.to_csv(r'balanced_data_50hz.csv',index = False)
 
 print(balanced_data['Activity'].value_counts())
 
