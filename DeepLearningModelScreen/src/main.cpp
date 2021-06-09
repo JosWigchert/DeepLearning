@@ -19,8 +19,6 @@
 #include "TensorModel.h"
 #include "testArray.h"
 #include "Logger.h"
-
-#include "Walking_Running_Cycling_Model.h" // here your include of the model
 /*==================================================*/
 /*===================== Defines ====================*/
 /*==================================================*/
@@ -43,7 +41,7 @@
 #define INPUT_ARRAY_SIZE 300
 
 #define DATA_TYPE_BUFFER_TIME .5
-#define DATA_TYPE_BUFFER_SIZE 25
+#define DATA_TYPE_BUFFER_SIZE 200
 
 #define SCALE_X 1024
 #define SCALE_Y 1024
@@ -154,13 +152,11 @@ float normalize(float toScale, float scale)
 void IRAM_ATTR readAccelSensor();
 
 void setup() {
-  Serial.begin(115200);
-  while (!Serial);// wait for serial port to connect. Needed for native USB port only
-
-  logger = new Logger(ChipSelect, LogFileName);
-
   Serial.println("Version 1.3 of Deeplearning Project");
 
+  // Open serial communications and wait for port to open:
+  Serial.begin(115200);
+  while (!Serial);// wait for serial port to connect. Needed for native USB port only
   Wire.begin(I2C_DT, I2C_CLK, 40000); // Setting i2c bus
 
   /*===================================================*/
@@ -184,6 +180,14 @@ void setup() {
   oled.putString(startString);
 
   /*===================================================*/
+  /*=============== Setting SPI SD Card ===============*/
+  /*===================================================*/
+
+  logger = new Logger(ChipSelect, LogFileName);
+
+  delay(300);
+
+  /*===================================================*/
   /*========== Setting MMA8452 Accelerometer ==========*/
   /*===================================================*/
 
@@ -199,15 +203,17 @@ void setup() {
     oled.putString("MMA8452 Sensor");
     oled.setTextXY(1,0);
     oled.putString("Not working");
-   // while (1); // halt microcontroller
+    while (1); // halt microcontroller
   }
   else
   {
     Serial.println("MMA8452 Initialization Successfull");
   }
   
-  accel.setScale(SCALE_4G); // set scale, can choose between: SCALE_2G - SCALE_4G - SCALE_8G
+  accel.setScale(SCALE_8G); // set scale, can choose between: SCALE_2G - SCALE_4G - SCALE_8G
 
+  delay(300);
+  
   /*===================================================*/
   /*========== Setting Pin Modes Of Used Pins =========*/
   /*===================================================*/
@@ -217,11 +223,13 @@ void setup() {
 
   pinMode(BUTTON_PIN, INPUT_PULLDOWN);
 
+  delay(300);
+
   /*===================================================*/
   /*============= Setting TensorFlow Model ============*/
   /*===================================================*/
 
-  model = new TensorModel(Walking_Running_Cycling_Model); // here the model name
+  model = new TensorModel();
 
   Serial.println("Calculating model");
   for (int i = 0; i < INPUT_ARRAY_SIZE; i++)
@@ -230,19 +238,103 @@ void setup() {
     input_array[i] = 0;
   }
   model->model_input->data.f = input_array;
+
+  /*===================================================*/
 }
+
+// void setup() {
+//   Serial.begin(115200);
+//   while (!Serial);// wait for serial port to connect. Needed for native USB port only
+
+//   logger = new Logger(ChipSelect, LogFileName);
+
+//   Serial.println("Version 1.3 of Deeplearning Project");
+
+//   Wire.begin(I2C_DT, I2C_CLK, 40000); // Setting i2c bus
+
+//   /*===================================================*/
+//   /*=============== Setting OLED Screen ===============*/
+//   /*===================================================*/
+
+//   oled.init();                      // Initialze SSD1306 OLED display
+//   oled.setFont(font8x8);            // Set font type (default 8x8)
+//   oled.clearDisplay();              // Clear screen
+
+//   oled.setTextXY(3,5);              // Set cursor position, start of line 0
+//   String startString = "Project";  
+//   oled.putString(startString);
+
+//   oled.setTextXY(4,6);              // Set cursor position, start of line 0
+//   startString = "Deep";  
+//   oled.putString(startString);
+
+//   oled.setTextXY(5,4);              // Set cursor position, start of line 0
+//   startString = "Learning";  
+//   oled.putString(startString);
+
+//   /*===================================================*/
+//   /*========== Setting MMA8452 Accelerometer ==========*/
+//   /*===================================================*/
+
+//   /*  Able to pass other wire ports into the library
+//       Only possible on hardware with mutliple ports like the Teensy and Due
+//       Not possible on the Uno
+//   */
+//   if (accel.begin(Wire) == false) 
+//   {
+//     Serial.println("I2C peripheral Not Connected. Please check connections and read the hookup guide.");
+//     oled.clearDisplay();
+//     oled.setTextXY(0,0);
+//     oled.putString("MMA8452 Sensor");
+//     oled.setTextXY(1,0);
+//     oled.putString("Not working");
+//    // while (1); // halt microcontroller
+//   }
+//   else
+//   {
+//     Serial.println("MMA8452 Initialization Successfull");
+//   }
+  
+//   accel.setScale(SCALE_8G); // set scale, can choose between: SCALE_2G - SCALE_4G - SCALE_8G
+
+//   /*===================================================*/
+//   /*========== Setting Pin Modes Of Used Pins =========*/
+//   /*===================================================*/
+
+//   pinMode(DIP_PIN_1, INPUT_PULLDOWN);
+//   pinMode(DIP_PIN_2, INPUT_PULLDOWN);
+
+//   pinMode(BUTTON_PIN, INPUT_PULLDOWN);
+
+//   /*===================================================*/
+//   /*============= Setting TensorFlow Model ============*/
+//   /*===================================================*/
+
+//   model = new TensorModel();
+  
+//   oled.clearDisplay();
+
+//   Serial.println("Calculating model");
+//   for (int i = 0; i < INPUT_ARRAY_SIZE; i++)
+//   {
+//     input_array_buffer[i] = 0;
+//     input_array[i] = 0;
+//   }
+//   model->model_input->data.f = input_array;
+// }
 
 void GatherData()
 {
   if (accel.available()) 
-    {      
-      accel.read(); // update accel values of sensor
-      input_array_buffer[currentIndex] = normalize(accel.x, 1024);
-      input_array_buffer[currentIndex+1] = normalize(accel.y, 1024);
-      input_array_buffer[currentIndex+2] = normalize(accel.z, 1024);
+  {      
+    accel.read(); // update accel values of sensor
+    input_array_buffer[currentIndex] = normalize(accel.x, 1024);
+    input_array_buffer[currentIndex+1] = normalize(accel.y, 1024);
+    input_array_buffer[currentIndex+2] = normalize(accel.z, 1024);
 
-      currentIndex = currentIndex + 3;
-    }
+    currentIndex = currentIndex + 3;
+    dataTypeBufferIndex++;
+  }
 }
 
 void Calculate()
@@ -349,6 +441,33 @@ void loop()
   if (dataTypeBufferIndex == DATA_TYPE_BUFFER_SIZE)
   {
     dataTypeBufferIndex = 0;
+    oled.clearDisplay();
+    oled.setTextXY(0,3);
+    oled.putString("Predicted");
+    oled.setTextXY(1,4);
+    oled.putString("Activity"); 
+    switch (dataType)
+    {
+    case Walking:
+      oled.setTextXY(4,4);
+      oled.putString("Walking");
+      break;
+    case Running:
+      oled.setTextXY(4,4);
+      oled.putString("Running");
+      break;
+    case Cycling:
+      oled.setTextXY(4,4);
+      oled.putString("Cycling");
+      break;
+    case ClimbingStairs:
+      oled.setTextXY(4,4);
+      oled.putString("Cycling");
+      break;
+    
+    default:
+      break;
+    }
   }
 
   if (Time2 + (1000 / SENSOR_READ_INTERVAL) < CurrentTime)

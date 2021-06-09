@@ -10,7 +10,7 @@ Y_pred = []
 time = []
 
 # The location of the log file is used in the function below
-f = open('J:\OneDrive - Avans Hogeschool\ProjectStappenteller\Ontwerp\LogBestandenMicrocontroller\log.txt', encoding="utf8")
+f = open('F:/log.txt', encoding="utf8")
 
 
 lines = f.readlines()
